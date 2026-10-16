@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Public sensor contracts. Per-sequence calibration remains authoritative for
+# NCore-backed datasets; this file records the grids consumed by LidarVerse.
+sensors:
+  nvidia_pai:
+    model: HESAI-AT128
+    grid: [128, 1200]
+    cadence_hz: 10
+    calibration: assets/lidar/lidar_model.yaml
+  pandaset:
+    model: HESAI-Pandar64
+    grid: [64, 1024]
+    cadence_hz: 10
+    calibration: tokenizer/training/datasets/lidar_datasets/pandaset.py
+  nuscenes:
+    model: HDL-32E
+    grid: [32, 1024]
+    native_cadence_hz: 20
+    world_model_cadence_hz: 2
+    calibration: per-sequence NCore metadata
+  waymo:
+    model: TOP
+    grid: [64, 1024]
+    cadence_hz: 10
+    calibration: per-sequence NCore metadata
