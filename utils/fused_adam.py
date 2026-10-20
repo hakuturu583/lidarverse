@@ -14,7 +14,8 @@
 # limitations under the License.
 
 import torch
-from apex.multi_tensor_apply import multi_tensor_applier
+
+from utils.compat import HAS_APEX, multi_tensor_applier
 
 from utils import distributed, log
 
@@ -122,7 +123,7 @@ class FusedAdam(torch.optim.Optimizer):
 
             self._step_supports_amp_scaling = True
 
-        if multi_tensor_applier.available:
+        if HAS_APEX and multi_tensor_applier.available:
             import amp_C
 
             # Skip buffer

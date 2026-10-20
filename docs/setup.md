@@ -7,10 +7,51 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Runtime Dependencies
 
-First complete the [README installation](../README.md#dependencies).
-Training and diffusion inference also need the CUDA extensions below.
-Use CUDA 12.6 with `nvcc`, a C++ compiler, Git, and cuDNN development headers,
-or an existing compatible training container.
+`uv sync` (see the [README](../README.md#dependencies)) installs everything
+training and diffusion inference import, Megatron Core included, from wheels.
+Three CUDA extensions are optional:
+
+| extension | used for | without it (`utils/compat.py`) |
+|---|---|---|
+| Transformer Engine | RMSNorm and RoPE in the DiT | PyTorch RMSNorm (FP32 statistics) and RoPE; checkpoints written with TE load as is |
+| NATTEN | the tokenizer's neighborhood attention | the same neighborhoods (clamped windows, dilation) gathered in PyTorch |
+| Apex | `FusedAdam`, multi-tensor gradient clipping | `torch.optim.AdamW(fused=True)`, `torch` norms |
+
+The released checkpoints use the `torch-flex` (causal) and `minimal_a2a`
+(bidirectional) attention backends, which need none of them. Set
+`LIDARVERSE_DISABLE_EXTENSIONS=te,natten,apex` (or `all`) to force the PyTorch
+paths, e.g. with an extension build that has no kernels for the GPU.
+
+### Blackwell (RTX PRO 6000, RTX 50 series)
+
+These are sm_120 GPUs: they need PyTorch built for CUDA 12.8 or newer (the
+locked `torch==2.8.0` is) and have about 100 KB of shared memory per block,
+less than the Hopper tiles PyTorch's FlexAttention picks for every GPU of
+compute capability 9.0 or higher. `utils.compat.flex_attention_kernel_options`
+selects 64x64 tiles on such GPUs (sm_86, sm_89, sm_120); A100, H100 and B200 keep
+PyTorch's defaults. Cached inference uses PyTorch's FlashAttention, which
+supports sm_120. With 96 GB the RTX PRO 6000 runs every quickstart stage.
+
+### Optional extensions
+
+Transformer Engine builds against the installed PyTorch (CUDA toolkit with
+`nvcc` and cuDNN headers on the machine):
+
+```bash
+uv sync --extra te
+```
+
+NATTEN publishes wheels per PyTorch/CUDA pair at
+[whl.natten.org](https://whl.natten.org); Apex is built from source
+(`APEX_CPP_EXT=1 APEX_CUDA_EXT=1 uv pip install --no-build-isolation
+'apex @ git+https://github.com/NVIDIA/apex.git'`). Install them into `.venv`
+with `uv pip`; a later `uv sync` removes packages that are not in the lock
+(use `uv sync --inexact` to keep them).
+
+### Original environment
+
+The training container used CUDA 12.6, PyTorch 2.7 and these pins
+(`requirements.txt` plus):
 
 ```bash
 python -m pip install \
@@ -27,13 +68,11 @@ python -m pip install --no-build-isolation --no-deps \
   'apex @ git+https://github.com/NVIDIA/apex.git@8a6508aaad6e75a2b939e33f308cd63d745d97f1'
 ```
 
-This installs Megatron Core, NVIDIA Apex, Transformer Engine, and FlashAttention 2.
-`--no-deps` avoids unrelated Megatron extras; the required runtime dependencies
-are installed above.
 Transformer Engine is pinned to the revision recorded in the training container.
 Apex uses an explicit upstream build pin: the container recorded `apex==0.1`
 without a source revision, so this is not an exact reproduction of that commit.
 Install NVIDIA Apex from the pinned Git source, not the unrelated PyPI `apex` package.
+CUDA 12.6 has no Blackwell (sm_120) kernels; use the `uv sync` environment there.
 System `ffmpeg` and `ffprobe` are also required; a Python package is not a substitute.
 
 ## Legacy Dataset Adapters

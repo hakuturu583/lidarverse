@@ -36,7 +36,6 @@ except ImportError:
 import numpy as np
 import torch
 import torch.amp as amp
-import transformer_engine as te
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from torch import nn
@@ -63,13 +62,11 @@ except (ImportError, OSError) as exc:
     _flash_attn_3_func = None
     _FLASH_ATTN_3_IMPORT_ERROR = exc
 
-try:
-    from transformer_engine.pytorch.attention.rope import apply_rotary_pos_emb
-except ImportError:
-    from transformer_engine.pytorch.attention import apply_rotary_pos_emb
 from torch.nn.attention.flex_attention import BlockMask, create_block_mask, flex_attention
 
 from diffusion.training.networks.cosmos_attention import attention as i4_attention_fn
+from utils.compat import RMSNorm as TERMSNorm
+from utils.compat import apply_rotary_pos_emb, flex_attention_kernel_options
 from diffusion.training.context_parallel import split_inputs_cp
 from utils import log
 from diffusion.conditioner import DataType
@@ -437,10 +434,14 @@ def flex_attention_op(
                 device=q_cat.device,
             )
 
+    # Tiles that fit the GPU's shared memory (Blackwell RTX PRO / GeForce: ~100 KB).
+    kernel_options = flex_attention_kernel_options(q_cat.device.index) if q_cat.is_cuda else None
     if block_mask is not None:
-        out_B_H_Sqp_D = torch.compile(flex_attention)(query=q_cat, key=k_cat, value=v_cat, block_mask=block_mask)
+        out_B_H_Sqp_D = torch.compile(flex_attention)(
+            query=q_cat, key=k_cat, value=v_cat, block_mask=block_mask, kernel_options=kernel_options
+        )
     else:
-        out_B_H_Sqp_D = torch.compile(flex_attention)(query=q_cat, key=k_cat, value=v_cat)
+        out_B_H_Sqp_D = torch.compile(flex_attention)(query=q_cat, key=k_cat, value=v_cat, kernel_options=kernel_options)
 
     out_B_H_Sq_D = out_B_H_Sqp_D[:, :, :S_q] if pad_q > 0 else out_B_H_Sqp_D
     if flatten_heads:
@@ -541,10 +542,10 @@ class Attention(nn.Module):
         self.use_wan_fp32_strategy = use_wan_fp32_strategy
 
         self.q_proj = nn.Linear(query_dim, inner_dim, bias=False)
-        self.q_norm = te.pytorch.RMSNorm(self.head_dim, eps=1e-6)
+        self.q_norm = TERMSNorm(self.head_dim, eps=1e-6)
 
         self.k_proj = nn.Linear(context_dim, inner_dim, bias=False)
-        self.k_norm = te.pytorch.RMSNorm(self.head_dim, eps=1e-6)
+        self.k_norm = TERMSNorm(self.head_dim, eps=1e-6)
 
         self.v_proj = nn.Linear(context_dim, inner_dim, bias=False)
         self.v_norm = nn.Identity()
@@ -553,7 +554,7 @@ class Attention(nn.Module):
         self.output_dropout = nn.Dropout(dropout) if dropout > 1e-4 else nn.Identity()
 
         if self.backend == "transformer_engine":
-            from transformer_engine.pytorch.attention import DotProductAttention
+            from utils.compat import DotProductAttention
 
             self.attn_op = DotProductAttention(
                 self.n_heads,
@@ -731,7 +732,7 @@ class I2VCrossAttention(Attention):
         inner_dim = self.head_dim * self.n_heads
         self.k_img = nn.Linear(img_latent_dim, inner_dim, bias=False)
         self.v_img = nn.Linear(img_latent_dim, inner_dim, bias=False)
-        self.k_img_norm = te.pytorch.RMSNorm(self.head_dim, eps=1e-6)
+        self.k_img_norm = TERMSNorm(self.head_dim, eps=1e-6)
 
     def init_weights(self) -> None:
         super().init_weights()
@@ -1894,7 +1895,7 @@ class MiniTrainDIT(WeightTrainingStat):
             use_wan_fp32_strategy=self.use_wan_fp32_strategy,
         )
 
-        self.t_embedding_norm = te.pytorch.RMSNorm(model_channels, eps=1e-6)
+        self.t_embedding_norm = TERMSNorm(model_channels, eps=1e-6)
         if extra_image_context_dim is not None:
             self.img_context_proj = nn.Sequential(
                 nn.Linear(

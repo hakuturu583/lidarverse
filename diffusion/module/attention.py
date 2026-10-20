@@ -17,11 +17,11 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-import transformer_engine as te
 from einops import rearrange
 from torch import nn
 from torch.utils.checkpoint import checkpoint
-from transformer_engine.pytorch.attention import DotProductAttention, apply_rotary_pos_emb
+
+from utils.compat import DotProductAttention, RMSNorm, apply_rotary_pos_emb
 
 # ---------------------- Feed Forward Network -----------------------
 
@@ -128,7 +128,7 @@ def get_normalization(name: str, channels: int):
     if name == "I":
         return nn.Identity()
     elif name == "R":
-        return te.pytorch.RMSNorm(channels, eps=1e-6)
+        return RMSNorm(channels, eps=1e-6)
     else:
         raise ValueError(f"Normalization {name} not found")
 

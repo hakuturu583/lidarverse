@@ -45,16 +45,9 @@ def _sample_polyline(vertices, spacing):
 
 
 def _box_points(sample, frame, spacing):
-    signs = np.array([[1, 1, 1], [1, -1, 1], [-1, -1, 1], [-1, 1, 1],
-                      [1, 1, -1], [1, -1, -1], [-1, -1, -1], [-1, 1, -1]], dtype=np.float64)
-    wireframe = [0, 1, 2, 3, 0, 4, 5, 6, 7, 4, 5, 1, 2, 6, 7, 3]
-    points = []
-    for index in np.flatnonzero(sample["box_valid"][frame]):
-        corners = signs * sample["box_lwh"][frame, index] / 2
-        pose = sample["box_object_to_world"][frame, index].astype(np.float64)
-        corners = corners @ pose[:3, :3].T + pose[:3, 3]
-        points.append(_sample_polyline(corners[wireframe], spacing))
-    return np.concatenate(points) if points else np.empty((0, 3), np.float32)
+    active = np.flatnonzero(sample["box_valid"][frame])
+    return box_wireframe_points(sample["box_object_to_world"][frame, active],
+                                sample["box_lwh"][frame, active], spacing)
 
 
 def _dilate_nearest(normalized, kernel_size):
@@ -69,30 +62,52 @@ def _dilate_nearest(normalized, kernel_size):
     return torch.where(torch.isfinite(nearest), nearest, -1.)[:, 0]
 
 
+def box_wireframe_points(box_object_to_world, box_lwh, spacing):
+    """Edge samples of boxes given as (M,4,4) object-to-world poses and (M,3) sizes."""
+    signs = np.array([[1, 1, 1], [1, -1, 1], [-1, -1, 1], [-1, 1, 1],
+                      [1, 1, -1], [1, -1, -1], [-1, -1, -1], [-1, 1, -1]], dtype=np.float64)
+    wireframe = [0, 1, 2, 3, 0, 4, 5, 6, 7, 4, 5, 1, 2, 6, 7, 3]
+    points = []
+    for pose, lwh in zip(box_object_to_world, box_lwh):
+        corners = signs * lwh / 2
+        pose = np.asarray(pose, dtype=np.float64)
+        corners = corners @ pose[:3, :3].T + pose[:3, 3]
+        points.append(_sample_polyline(corners[wireframe], spacing))
+    return np.concatenate(points) if points else np.empty((0, 3), np.float32)
+
+
+def sample_polylines(vertices, offsets, spacing):
+    """Densify the polylines ``vertices[offsets[i]:offsets[i+1]]`` to ``spacing`` meters."""
+    if len(offsets) < 2:
+        return np.empty((0, 3), np.float32)
+    return np.concatenate([_sample_polyline(vertices[a:b], spacing)
+                           for a, b in zip(offsets[:-1], offsets[1:])])
+
+
 @torch.inference_mode()
-def rasterize_raw_hdmap(sample, *, bbox_dilation=1, seg_interval=0.1):
-    """Return a (T,H,W) normalized condition and provenance, without GT LiDAR."""
+def rasterize_points_condition(static_points, box_points, pose_sensor_start_end, ray_directions,
+                               *, bbox_dilation=1, device="cuda"):
+    """Project world-space map points (shared) and per-frame box points into
+    the sensor's range grid with rolling-shutter poses.
+
+    ``pose_sensor_start_end``: (T,2,4,4) sensor-to-world at sweep start/end;
+    ``box_points``: T arrays of (N_t,3). Returns the (T,H,W) normalized
+    condition and the static / box hit masks."""
     from diffusion.training.datasets.lidar_dataset.forecast_warp import (
         TorchSpatialPointMap, compose_normalized_range_channels,
     )
     from diffusion.training.models.hdmaptolidar_model_rf import _sensor_tables_from_ray_directions
 
-    validate_raw_hdmap(sample)
-    if not np.isfinite(seg_interval) or seg_interval <= 0:
-        raise ValueError("Raw HDMap segment spacing must be positive and finite")
     if bbox_dilation < 1 or bbox_dilation % 2 != 1:
         raise ValueError("BBox dilation must be a positive odd integer")
-    rays = torch.as_tensor(sample["ray_directions"], dtype=torch.float32, device="cuda")
+    rays = torch.as_tensor(ray_directions, dtype=torch.float32, device=device)
     elevations, azimuths, offsets = _sensor_tables_from_ray_directions(rays, allow_approximate=True)
     renderer = TorchSpatialPointMap(
         ray_dirs=rays, row_elevations_rad=elevations, column_azimuths_rad=azimuths,
         row_azimuth_offsets_rad=offsets, min_range=2.5, max_range=100,
-        min_value=-1, inverse_depth=False, radius_m=100, voxel_size_m=0.2, device="cuda",
+        min_value=-1, inverse_depth=False, radius_m=100, voxel_size_m=0.2, device=device,
     )
-    vertices, offsets = sample["map_vertices"], sample["map_offsets"]
-    static_points = np.concatenate([_sample_polyline(vertices[a:b], seg_interval)
-                                    for a, b in zip(offsets[:-1], offsets[1:])])
-    poses = sample["pose_sensor_start_end"].astype(np.float32)
+    poses = np.asarray(pose_sensor_start_end, dtype=np.float32)
     motions = np.linalg.inv(poses[:, 1]) @ poses[:, 0]
     static, static_hit = renderer.render_points_world(
         static_points, poses[:, 0], target_pose_sensor_start_end=motions,
@@ -100,21 +115,38 @@ def rasterize_raw_hdmap(sample, *, bbox_dilation=1, seg_interval=0.1):
     boxes, box_hits = [], []
     for t, pose in enumerate(poses):
         ranges, hits = renderer.render_points_world(
-            _box_points(sample, t, seg_interval), pose[None, 0],
-            target_pose_sensor_start_end=motions[t:t + 1],
+            box_points[t], pose[None, 0], target_pose_sensor_start_end=motions[t:t + 1],
         )
         boxes.append(ranges[0, 0])
         box_hits.append(hits[0])
     thick_boxes = _dilate_nearest(torch.stack(boxes), bbox_dilation)
     condition = compose_normalized_range_channels(
         torch.stack((static[0], thick_boxes)), channel_dim=0, min_value=-1, inverse_depth=False,
-    )[0].cpu().numpy()
+    )[0]
+    return condition, static_hit, torch.stack(box_hits), thick_boxes
+
+
+@torch.inference_mode()
+def rasterize_raw_hdmap(sample, *, bbox_dilation=1, seg_interval=0.1):
+    """Return a (T,H,W) normalized condition and provenance, without GT LiDAR."""
+    validate_raw_hdmap(sample)
+    if not np.isfinite(seg_interval) or seg_interval <= 0:
+        raise ValueError("Raw HDMap segment spacing must be positive and finite")
+    if bbox_dilation < 1 or bbox_dilation % 2 != 1:
+        raise ValueError("BBox dilation must be a positive odd integer")
+    static_points = sample_polylines(sample["map_vertices"], sample["map_offsets"], seg_interval)
+    box_points = [_box_points(sample, t, seg_interval) for t in range(len(sample["pose_sensor_start_end"]))]
+    condition, static_hit, box_hits, thick_boxes = rasterize_points_condition(
+        static_points, box_points, sample["pose_sensor_start_end"], sample["ray_directions"],
+        bbox_dilation=bbox_dilation, device="cuda",
+    )
+    condition = condition.cpu().numpy()
     stats = dict(
         source="prepared_raw_vectors", bbox_dilation_kernel=bbox_dilation,
         map_dilation_kernel=1, segment_spacing_m=seg_interval,
         rolling_shutter=True, min_range_m=2.5, max_range_m=100,
         static_hit_fraction=float(static_hit.float().mean()),
-        bbox_hit_fraction_before_dilation=float(torch.stack(box_hits).float().mean()),
+        bbox_hit_fraction_before_dilation=float(box_hits.float().mean()),
         bbox_hit_fraction_after_dilation=float((thick_boxes > -1 + 1e-5).float().mean()),
         original_hit_fraction=float((sample["hdmap"] > -1 + 1e-5).mean()),
         condition_hit_fraction=float((condition > -1 + 1e-5).mean()),

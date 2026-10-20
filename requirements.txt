@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# CUDA 12.6; install PyTorch first (README.md#dependencies).
+# The original CUDA 12.6 environment (docs/setup.md#original-environment).
+# `uv sync` (pyproject.toml, uv.lock) is the supported install, incl. Blackwell GPUs.
 --extra-index-url https://download.pytorch.org/whl/cu126
 --find-links https://whl.natten.org
 torch==2.7.0+cu126

@@ -18,6 +18,7 @@ import torch
 from torch import nn
 
 from utils import log
+from utils.compat import HAS_APEX
 from utils.fused_adam import FusedAdam
 
 
@@ -59,6 +60,11 @@ def get_base_optimizer(
 
     if optim_type == "adamw":
         opt_cls = torch.optim.AdamW
+    elif optim_type == "fusedadam" and not HAS_APEX:
+        # Apex's CUDA extension is not installed: PyTorch's fused AdamW.
+        log.warning("Apex is not installed; FusedAdam falls back to torch.optim.AdamW(fused=True)")
+        kwargs = {k: v for k, v in kwargs.items() if k not in ("master_weights", "capturable", "adam_w_mode", "set_grad_none")}
+        opt_cls = lambda params, **kw: torch.optim.AdamW(params, fused=torch.cuda.is_available(), **kw)  # noqa: E731
     elif optim_type == "fusedadam":
         opt_cls = FusedAdam
     else:

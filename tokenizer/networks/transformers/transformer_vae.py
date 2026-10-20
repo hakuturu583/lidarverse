@@ -15,7 +15,8 @@
 #
 # Based on: https://github.com/crowsonkb/k-diffusion/blob/master/
 #           k_diffusion/models/image_transformer_v2.py
-# Call `natten.use_fused_na(True)` for acceleration on GPUs.
+# Call `natten.use_fused_na(True)` for acceleration on GPUs; without NATTEN,
+# utils.compat.na2d runs the same neighborhood attention in PyTorch.
 # =============================================================================
 
 import contextlib
@@ -25,7 +26,6 @@ from collections import namedtuple
 from typing import List, Literal
 
 import einops
-import natten
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
@@ -36,6 +36,7 @@ from torch.nn.modules.utils import _pair
 from torch.utils.checkpoint import checkpoint
 
 from tokenizer.networks.common import ContinuousFormulation
+from utils.compat import na2d
 from tokenizer.networks.transformers.rope3d import (
     VideoRopePosition3DEmb,
     apply_rotary_emb,
@@ -246,7 +247,7 @@ class CircularNeighborhoodSelfAttentionBlock(GlobalSelfAttentionBlock):
         q, k = self.scale_qk(q, k)
         q, k = self.apply_rope_qk(q, k, coords)
         q, k, v = self.before_attn(q, k, v)
-        h = natten.functional.na2d(
+        h = na2d(
             query=q,
             key=k,
             value=v,

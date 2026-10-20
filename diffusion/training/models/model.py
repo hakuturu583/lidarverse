@@ -16,9 +16,7 @@
 import math
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
-import amp_C
 import torch
-from apex.multi_tensor_apply import multi_tensor_applier
 from einops import rearrange
 from megatron.core import parallel_state
 from torch import Tensor
@@ -34,9 +32,8 @@ from diffusion.training.models.model_image import CosmosCondition
 from diffusion.training.models.model_image import DiffusionModel as ImageModel
 from diffusion.training.models.model_image import diffusion_fsdp_class_decorator
 from utils import distributed, log, misc
+from utils.compat import l2_norm_impl, multi_tensor_applier, multi_tensor_scale_impl
 
-l2_norm_impl = amp_C.multi_tensor_l2norm
-multi_tensor_scale_impl = amp_C.multi_tensor_scale
 
 # key to check if the video data is normalized or image data is converted to video data
 # to avoid apply normalization or augment image dimension multiple times
