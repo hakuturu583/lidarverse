@@ -633,7 +633,6 @@ dependencies = [
     { name = "packaging" },
     { name = "pillow" },
     { name = "psutil" },
-    { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -686,11 +685,10 @@ requires-dist = [
     { name = "packaging", specifier = "==24.2" },
     { name = "pillow", specifier = "==11.1.0" },
     { name = "psutil", specifier = "==6.0.0" },
-    { name = "pyarrow", specifier = ">=17" },
     { name = "pydantic", specifier = "==2.10.6" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "requests", specifier = "==2.32.3" },
-    { name = "roadgen", specifier = ">=0.36.0" },
+    { name = "roadgen", specifier = ">=0.37.0" },
     { name = "scikit-image", specifier = "==0.25.2" },
     { name = "scipy", specifier = "==1.15.1" },
     { name = "tensorstore", specifier = "==0.1.45" },
@@ -1408,18 +1406,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyarrow"
-version = "25.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3d/e3/27f57f80141379d60defe6703eb50a707325706f07fedfd1312c7a751995/pyarrow-25.0.1.tar.gz", hash = "sha256:9150a83248bfed9813ea3c3af74c3856c1984d444aa28e58bf7733b9750ddf6a", size = 1201653, upload-time = "2026-08-10T12:40:53.904Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/34/e138b451fd3970a6eda4599f68ae3b2b32b661bc958de3239d54a0bf6575/pyarrow-25.0.1-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:bddd0c4f7630c2a3ddf6347c1bdaa79d97bcf6bd445f9e60c816b7d77c85a5ae", size = 46837120, upload-time = "2026-08-10T12:36:46.58Z" },
-    { url = "https://files.pythonhosted.org/packages/57/5c/f8fc0eb2de03464a557d5a4d0c15e972d73362414696618833b771f7eddd/pyarrow-25.0.1-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:a4d6d5e9a3d1879a97c08ded0c797579b7965eafd0f0c26c30b45ccc06db939b", size = 50066460, upload-time = "2026-08-10T12:36:53.702Z" },
-    { url = "https://files.pythonhosted.org/packages/3f/d1/0dd64fd06de0333b808a02f60981635f067b71aad3a30698a9a104fae778/pyarrow-25.0.1-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:514ddb60285631af068875550c90eddc181db3e8e63a032b1559be189e82f056", size = 49937892, upload-time = "2026-08-10T12:37:00.349Z" },
-    { url = "https://files.pythonhosted.org/packages/cb/3c/f89d1bd76d5f3284c2a44d7d7ebbd8204535e5ae2b41f4077069b4ff2ec6/pyarrow-25.0.1-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:cab40b1edfef0262e0e5251aa2c58d75630f24d06dd7794480243acc001a1d7d", size = 53107240, upload-time = "2026-08-10T12:37:07.205Z" },
-]
-
-[[package]]
 name = "pydantic"
 version = "2.10.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1541,12 +1527,12 @@ wheels = [
 
 [[package]]
 name = "roadgen"
-version = "0.36.0"
+version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9e/91/9783c0cd2c9355b2784597497b87889c46685e108561a9923b2a36793bf3/roadgen-0.36.0.tar.gz", hash = "sha256:8b8965a3dfbaaa87df3733f209918fbff3495f95b5361775b892b225a23fcf27", size = 973948, upload-time = "2026-10-20T14:35:17.846Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/1e/e63bdcb64fe09f0902795c5be10b12a90c0865d7473ec326270ed9f00fb5/roadgen-0.37.0.tar.gz", hash = "sha256:c65cba567fe51745a417f7baa7877b06ca54c26bb3f27a2eb11ca3d8d668461d", size = 990943, upload-time = "2026-10-20T23:02:45.786Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/86/bd5e7cf2abdbf12e9e951c3876559419f06a15f7877b36ecc58f5cebae17/roadgen-0.36.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cc02839f32c0613f43d34da1ee582d0ecfc882eda2f392cb39dc0a4cf975e8c3", size = 5361863, upload-time = "2026-10-20T14:35:13.675Z" },
-    { url = "https://files.pythonhosted.org/packages/8f/8d/ae24318ce6584c1b8ec5a5040df8ab54ccbad658ceee57a407660f726a62/roadgen-0.36.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:de393002da959bd511796231f91b1bb64d53e0f34025af7403385c89c5d2d367", size = 5852136, upload-time = "2026-10-20T14:35:16.026Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/1f/e43d004d3e4703f50894b41a57d4ee363beadef2431fbc5e5632f6acb411/roadgen-0.37.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f095921bd86627e9a0c2111f3ed0be550688346a2e822ed20eac3650948bf01c", size = 5421726, upload-time = "2026-10-20T23:02:40.962Z" },
+    { url = "https://files.pythonhosted.org/packages/78/a7/73f7b5478e3d15e6bab5fe673782f20dc72ac32b2dcd9af79ab369917697/roadgen-0.37.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3b87d15b3558ced2427f8850488f1fefdca05c43ad8149b156eaa6e18ee93fe1", size = 5918298, upload-time = "2026-10-20T23:02:43.712Z" },
 ]
 
 [[package]]

@@ -71,12 +71,38 @@ def test_grid_cells_round_trip():
 
 
 def test_vector_map_from_opendrive_keeps_its_frame():
+    from utils.visualize.hdmap import MAP_KINDS
+
     vm = VectorMap.from_opendrive(opendrive(10.0))
-    ys = np.unique(np.round(vm.vertices[:, 1], 3))
-    assert {6.5, 10.0, 13.5} <= set(ys.tolist())
+    kind_y = {(MAP_KINDS[k], round(float(vm.vertices[vm.offsets[i], 1]), 3)) for i, k in enumerate(vm.kinds)}
+    # RDS-HQ: boundaries and the centre line at the edges / middle, lanes as centrelines
+    assert {("road_boundaries", 6.5), ("road_boundaries", 13.5), ("lanelines", 10.0),
+            ("lanes", 8.25), ("lanes", 11.75)} <= kind_y
     assert vm.vertices[:, 0].min() == pytest.approx(0.0) and vm.vertices[:, 0].max() == pytest.approx(100.0)
     near = vm.near(np.array([[0.0, 10.0, 0.0]]), 5.0)
     assert len(near) and np.abs(near[:, 0]).max() <= 5.0 + 1e-4
+
+
+def test_vector_map_has_objects_as_the_training_data_does():
+    from utils.visualize.hdmap import MAP_KINDS
+
+    m = roadgen.Map()
+    road = m.add_road(start=(0.0, 0.0, 0.0), end=(100.0, 0.0, 0.0),
+                      lanes=[roadgen.Lane(width=3.5, direction="forward"), roadgen.Lane(width=3.5, direction="backward")])
+    m.add_crosswalk(road, 0.5)
+    m.add_stop_line(road.lane(0), setback=5.0)
+    m.add_traffic_light(road.lane(0))
+    m.add_traffic_sign(road.lane(0), "206")
+    vm = VectorMap.from_opendrive(m.to_opendrive_xml())
+    kinds = [MAP_KINDS[k] for k in vm.kinds]
+    assert {"crosswalks", "wait_lines", "traffic_lights", "traffic_signs"} <= set(kinds)
+    # cuboids become closed 16-vertex wireframes (load_vectors), crosswalks closed outlines
+    light = kinds.index("traffic_lights")
+    corners = vm.vertices[vm.offsets[light]:vm.offsets[light + 1]]
+    assert len(corners) == 16 and (corners[:, 2].min() + corners[:, 2].max()) / 2 == pytest.approx(5.0)
+    crosswalk = kinds.index("crosswalks")
+    outline = vm.vertices[vm.offsets[crosswalk]:vm.offsets[crosswalk + 1]]
+    np.testing.assert_allclose(outline[0], outline[-1])
 
 
 def test_track_interpolates_and_extrapolates():

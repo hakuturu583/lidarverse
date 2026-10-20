@@ -56,11 +56,10 @@ dependencies = [
     "importlib-metadata==8.6.1",
     "psutil==6.0.0",
     "tensorstore==0.1.45",
-    # carla_canvas backend (lidarverse_canvas): the renderer SDK, OpenDRIVE
-    # reading (roadgen) and its vector layers (parquet).
+    # carla_canvas backend (lidarverse_canvas): the renderer SDK, and OpenDRIVE
+    # to RDS-HQ vector layers (roadgen >= 0.37 has the RDS-HQ exporter).
     "carla-canvas>=0.2.0",
-    "roadgen>=0.36.0",
-    "pyarrow>=17",
+    "roadgen>=0.37.0",
 ]
 
 [project.optional-dependencies]
