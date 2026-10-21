@@ -14,7 +14,7 @@ Three CUDA extensions are optional:
 | extension | used for | without it (`utils/compat.py`) |
 |---|---|---|
 | Transformer Engine | RMSNorm and RoPE in the DiT | PyTorch RMSNorm (FP32 statistics) and RoPE; checkpoints written with TE load as is |
-| NATTEN | the tokenizer's neighborhood attention | the same neighborhoods (clamped windows, dilation) gathered in PyTorch |
+| NATTEN | the tokenizer's neighborhood attention (`uv sync --extra natten`) | the same neighborhoods (clamped windows, dilation) gathered in PyTorch, several times slower |
 | Apex | `FusedAdam`, multi-tensor gradient clipping | `torch.optim.AdamW(fused=True)`, `torch` norms |
 
 The released checkpoints use the `torch-flex` (causal) and `minimal_a2a`
@@ -42,7 +42,20 @@ uv sync --extra te
 ```
 
 NATTEN publishes wheels per PyTorch/CUDA pair at
-[whl.natten.org](https://whl.natten.org); Apex is built from source
+[whl.natten.org](https://whl.natten.org); the one for the locked torch 2.8.0
++ CUDA 12.8 (x86_64) is the `natten` extra, and its kernels run on sm_120:
+
+```bash
+uv sync --extra natten
+```
+
+It is the extension that matters for inference: the tokenizer's neighborhood
+attention is the HDMap condition's encoder and the decoder of every block. On an
+RTX PRO 6000 Blackwell Max-Q (Stage 3, 4 steps, blocks of four sweeps) a sweep
+takes 284 ms with it and 636 ms without (condition 155 vs 1080 ms and decode
+110 vs 580 ms a block; sampling, 650 ms, is the same).
+
+Apex is built from source
 (`APEX_CPP_EXT=1 APEX_CUDA_EXT=1 uv pip install --no-build-isolation
 'apex @ git+https://github.com/NVIDIA/apex.git'`). Install them into `.venv`
 with `uv pip`; a later `uv sync` removes packages that are not in the lock
