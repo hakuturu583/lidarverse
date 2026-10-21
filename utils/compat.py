@@ -53,7 +53,9 @@ HAS_TE = te is not None
 
 class TorchRMSNorm(nn.Module):
     """``transformer_engine.pytorch.RMSNorm`` (zero_centered_gamma=False):
-    statistics in FP32, output in the input dtype, a ``weight`` parameter."""
+    statistics in FP32, output in the autocast dtype when autocast is on (as
+    Transformer Engine's layers compute), else in the input dtype, a ``weight``
+    parameter."""
 
     def __init__(self, normalized_shape: int, eps: float = 1e-5, device=None, dtype=None, **_):
         super().__init__()
@@ -68,7 +70,14 @@ class TorchRMSNorm(nn.Module):
         dims = tuple(range(-len(self.normalized_shape), 0))
         x32 = x.float()
         y = x32 * torch.rsqrt(x32.pow(2).mean(dim=dims, keepdim=True) + self.eps)
-        return (y * self.weight.float()).to(x.dtype)
+        # The networks' Wan FP32 blocks (`amp.autocast(dtype=float32)` around the
+        # timestep embedding) assert an FP32 result, which TE gives there.
+        device = x.device.type
+        if torch.is_autocast_enabled(device):
+            dtype = torch.get_autocast_dtype(device)
+        else:
+            dtype = x.dtype
+        return (y * self.weight.float()).to(dtype)
 
     def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
         # Checkpoints written with Transformer Engine carry its (FP8) extra state.
