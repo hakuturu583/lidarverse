@@ -179,3 +179,30 @@ def test_compat_rmsnorm_loads_transformer_engine_state():
     x = torch.randn(3, 8, dtype=torch.bfloat16)
     expected = (x.float() * torch.rsqrt(x.float().pow(2).mean(-1, keepdim=True) + 1e-6) * 2).bfloat16()
     torch.testing.assert_close(norm(x), expected)
+
+
+def test_compat_rmsnorm_computes_in_the_autocast_dtype():
+    """As Transformer Engine's layers: under autocast the output is the autocast
+    dtype, outside it the input's."""
+    from utils.compat import TorchRMSNorm
+
+    norm = TorchRMSNorm(8, eps=1e-6)
+    x = torch.randn(3, 8)
+    assert norm(x).dtype == torch.float32
+    with torch.autocast("cpu", dtype=torch.bfloat16):
+        assert norm(x).dtype == torch.bfloat16
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+def test_compat_rmsnorm_is_fp32_in_the_wan_fp32_blocks():
+    """The timestep embedding's norm runs in `amp.autocast(dtype=float32)` inside
+    the bf16 autocast of generation, with bf16 weights, and the final layer
+    asserts an FP32 embedding (`use_wan_fp32_strategy`)."""
+    from utils.compat import TorchRMSNorm
+
+    norm = TorchRMSNorm(8, eps=1e-6).cuda().bfloat16()
+    x = torch.randn(3, 8, device="cuda", dtype=torch.bfloat16)
+    with torch.autocast("cuda", dtype=torch.bfloat16):
+        assert norm(x).dtype == torch.bfloat16
+        with torch.autocast("cuda", dtype=torch.float32):
+            assert norm(x).dtype == torch.float32
