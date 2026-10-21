@@ -99,7 +99,8 @@ def test_vector_map_has_objects_as_the_training_data_does():
     # cuboids become closed 16-vertex wireframes (load_vectors), crosswalks closed outlines
     light = kinds.index("traffic_lights")
     corners = vm.vertices[vm.offsets[light]:vm.offsets[light + 1]]
-    assert len(corners) == 16 and (corners[:, 2].min() + corners[:, 2].max()) / 2 == pytest.approx(5.0)
+    # the housing stands on the bar add_traffic_light puts 5 m up (roadgen >= 0.37.1)
+    assert len(corners) == 16 and corners[:, 2].min() == pytest.approx(5.0)
     crosswalk = kinds.index("crosswalks")
     outline = vm.vertices[vm.offsets[crosswalk]:vm.offsets[crosswalk + 1]]
     np.testing.assert_allclose(outline[0], outline[-1])

@@ -688,7 +688,7 @@ requires-dist = [
     { name = "pydantic", specifier = "==2.10.6" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "requests", specifier = "==2.32.3" },
-    { name = "roadgen", specifier = ">=0.37.0" },
+    { name = "roadgen", specifier = ">=0.37.1" },
     { name = "scikit-image", specifier = "==0.25.2" },
     { name = "scipy", specifier = "==1.15.1" },
     { name = "tensorstore", specifier = "==0.1.45" },
@@ -1527,12 +1527,12 @@ wheels = [
 
 [[package]]
 name = "roadgen"
-version = "0.37.0"
+version = "0.37.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fa/1e/e63bdcb64fe09f0902795c5be10b12a90c0865d7473ec326270ed9f00fb5/roadgen-0.37.0.tar.gz", hash = "sha256:c65cba567fe51745a417f7baa7877b06ca54c26bb3f27a2eb11ca3d8d668461d", size = 990943, upload-time = "2026-10-20T23:02:45.786Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/ce/59b67b32ee0033b5021f28d2052847b5bbefd381a4ec601b8258b89b9b81/roadgen-0.37.1.tar.gz", hash = "sha256:2ee15261a77676569f43e1f7fb24507f67f13aeb17e29a74b104630744e6bea4", size = 991226, upload-time = "2026-10-21T00:26:38.865Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/1f/e43d004d3e4703f50894b41a57d4ee363beadef2431fbc5e5632f6acb411/roadgen-0.37.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f095921bd86627e9a0c2111f3ed0be550688346a2e822ed20eac3650948bf01c", size = 5421726, upload-time = "2026-10-20T23:02:40.962Z" },
-    { url = "https://files.pythonhosted.org/packages/78/a7/73f7b5478e3d15e6bab5fe673782f20dc72ac32b2dcd9af79ab369917697/roadgen-0.37.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3b87d15b3558ced2427f8850488f1fefdca05c43ad8149b156eaa6e18ee93fe1", size = 5918298, upload-time = "2026-10-20T23:02:43.712Z" },
+    { url = "https://files.pythonhosted.org/packages/db/e3/67fd5b222987371f0038883c8c95027fb062f0d13cf62268d30e553d5974/roadgen-0.37.1-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a4dfc0c4246f5a989fb79e7225afbdabcce69c65e8b11014b20c7cc46eb6d607", size = 5422999, upload-time = "2026-10-21T00:26:34.257Z" },
+    { url = "https://files.pythonhosted.org/packages/78/88/90677e0f7924b23de6e971b78253c284955488d6af6049951fbacdee8f67/roadgen-0.37.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:101eb6f9a586fb558b10f3038ae9a723f6de32f9e4856332c7395c9796e72fe3", size = 5919102, upload-time = "2026-10-21T00:26:36.945Z" },
 ]
 
 [[package]]
