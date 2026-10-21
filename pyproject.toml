@@ -66,6 +66,11 @@ dependencies = [
 # Fused kernels; built from source against the installed torch (CUDA toolkit
 # with nvcc and cuDNN headers needed): uv sync --extra te
 te = ["transformer-engine[pytorch]>=2.4"]
+# The tokenizer's neighborhood attention (the HDMap condition's encoder and the
+# decoder) as NATTEN's kernels, which run on sm_120 too: uv sync --extra natten.
+# NATTEN publishes a wheel per torch/CUDA pair (whl.natten.org), not on PyPI;
+# the one for the locked torch 2.8.0 + cu128 is x86_64 only.
+natten = ["natten==0.21.1; platform_machine == 'x86_64'"]
 
 [dependency-groups]
 dev = ["pytest>=8"]
@@ -93,6 +98,9 @@ override-dependencies = [
     "zarr; sys_platform == 'never'",
 ]
 no-build-isolation-package = ["transformer-engine-torch"]
+
+[tool.uv.sources]
+natten = { url = "https://github.com/SHI-Labs/NATTEN/releases/download/v0.21.1/natten-0.21.1%2Btorch280cu128-cp310-cp310-linux_x86_64.whl" }
 
 [tool.uv.extra-build-dependencies]
 transformer-engine-torch = [{ requirement = "torch", match-runtime = true }]
